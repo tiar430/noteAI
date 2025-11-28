@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NoteAI - Smart Productivity Suite</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="AI-powered note-taking and productivity app with smart features">
+    <meta name="theme-color" content="#00ffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="NoteAI">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E📝%3C/text%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230a0a0a'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='100' fill='%2300ffff'%3E📝%3C/text%3E%3C/svg%3E">
+    
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "@google/generative-ai": "https://esm.run/@google/generative-ai"
+        }
+      }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-left">
+                <h1 class="title">NEON NOTES</h1>
+                <div class="subtitle">Advanced Edition</div>
+                <div class="date-time" id="dateTime"></div>
+            </div>
+            <div class="header-controls">
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Search notes and todos...">
+                    <button id="searchBtn">🔍</button>
+                </div>
+                <div class="theme-controls">
+                    <button id="themeToggle" class="theme-btn">🌙</button>
+                    <button id="statsBtn" class="theme-btn" title="Statistics">📊</button>
+                    <button id="shortcutsBtn" class="theme-btn" title="Keyboard Shortcuts">⌨️</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <section class="sidebar">
+                <!-- Pomodoro Timer -->
+                <div class="pomodoro-timer">
+                    <h3>🍅 Pomodoro Timer</h3>
+                    <div class="timer-display" id="timerDisplay">25:00</div>
+                    <div class="timer-controls">
+                        <button id="timerStart" class="timer-btn">Start</button>
+                        <button id="timerPause" class="timer-btn">Pause</button>
+                        <button id="timerReset" class="timer-btn">Reset</button>
+                    </div>
+                    <div class="timer-mode">
+                        <button id="workMode" class="mode-btn active">Work</button>
+                        <button id="breakMode" class="mode-btn">Break</button>
+                    </div>
+                </div>
+
+                <div class="ai-assistant">
+                    <h3>AI Assistant</h3>
+                    <div class="ai-chat" id="aiChat">
+                        <div class="ai-message">Hello! I'm here to help you organize your thoughts.</div>
+                    </div>
+                    <div class="ai-input-container">
+                        <input type="text" id="aiInput" placeholder="Ask me anything...">
+                        <button id="aiSendBtn" class="ai-send-btn" title="Send (Enter)">➤</button>
+                    </div>
+                </div>
+
+                <div class="tag-filters">
+                    <h3>Tags</h3>
+                    <div id="tagList"></div>
+                </div>
+
+                <div class="history">
+                    <h3>History</h3>
+                    <div class="sort-controls">
+                        <select id="sortSelect">
+                            <option value="date">Sort by Date</option>
+                            <option value="title">Sort by Title</option>
+                            <option value="tags">Sort by Tags</option>
+                        </select>
+                    </div>
+                    <div id="historyList"></div>
+                </div>
+
+                <div class="export-section">
+                    <h3>Data Management</h3>
+                    <button id="viewAllNotes" class="export-btn">📋 All Notes</button>
+                    <button id="viewTrash" class="export-btn">🗑️ Trash Bin</button>
+                    <button id="bulkMode" class="export-btn">☑️ Bulk Select</button>
+                    <button id="customTheme" class="export-btn">🎨 Themes</button>
+                    <button id="aiSettings" class="export-btn">⚙️ AI Settings</button>
+                    <button id="cloudSync" class="export-btn">☁️ Cloud Sync</button>
+                    <button id="exportJSON" class="export-btn">📥 Export JSON</button>
+                    <button id="exportPDF" class="export-btn">📄 Export PDF</button>
+                    <button id="importJSON" class="export-btn">📤 Import JSON</button>
+                    <input type="file" id="importFile" accept=".json" style="display: none;">
+                    <button id="backupBtn" class="export-btn">💾 Backup All</button>
+                </div>
+            </section>
+
+            <section class="content">
+                <div class="note-editor">
+                    <div class="editor-header">
+                        <h2>Quick Note</h2>
+                        <div class="editor-controls">
+                            <button id="templatesBtn" class="control-btn" title="Note Templates">📋</button>
+                            <button id="voiceBtn" class="control-btn" title="Voice Input">🎤</button>
+                            <button id="markdownToggle" class="control-btn" title="Markdown Preview">👁️</button>
+                            <select id="categorySelect" class="category-select">
+                                <option value="">No Category</option>
+                                <option value="work">💼 Work</option>
+                                <option value="personal">👤 Personal</option>
+                                <option value="ideas">💡 Ideas</option>
+                                <option value="urgent">🔥 Urgent</option>
+                            </select>
+                            <button id="pinNote" class="control-btn" title="Pin Note">📌</button>
+                        </div>
+                    </div>
+                    <div class="tag-input-container">
+                        <input type="text" id="tagInput" placeholder="Add tags (comma separated)">
+                        <div class="tag-suggestions" id="tagSuggestions"></div>
+                    </div>
+                    <div class="editor-container">
+                        <textarea id="noteInput" placeholder="Start typing your thoughts... (Supports Markdown)"></textarea>
+                        <div id="markdownPreview" class="markdown-preview" style="display: none;"></div>
+                    </div>
+                    <div class="note-actions">
+                        <button id="saveNote">💾 Save Note</button>
+                        <button id="clearNote">🗑️ Clear</button>
+                        <div class="ai-actions-dropdown">
+                            <button id="aiImproveBtn" class="ai-improve-btn">✨ AI Improve ▼</button>
+                            <div class="ai-actions-menu" id="aiActionsMenu">
+                                <button onclick="app.aiImprove('grammar')">🖊️ Fix Grammar</button>
+                                <button onclick="app.aiImprove('professional')">💼 Make Professional</button>
+                                <button onclick="app.aiImprove('simplify')">🎯 Simplify</button>
+                                <button onclick="app.aiImprove('expand')">📝 Expand</button>
+                                <button onclick="app.aiImprove('reformat')">📋 Reformat</button>
+                            </div>
+                        </div>
+                        <span class="auto-save-indicator" id="autoSaveIndicator"></span>
+                    </div>
+                </div>
+
+                <div class="todo-section">
+                    <h2>To-Do List</h2>
+                    <div class="todo-input">
+                        <input type="text" id="todoInput" placeholder="Add new task...">
+                        <select id="todoPriority" class="priority-select">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                        <button id="addTodo">➕ Add Task</button>
+                    </div>
+                    <div class="todo-filters">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="active">Active</button>
+                        <button class="filter-btn" data-filter="completed">Completed</button>
+                    </div>
+                    <ul id="todoList"></ul>
+                </div>
+
+                <div class="search-results" id="searchResults" style="display: none;">
+                    <h2>Search Results</h2>
+                    <div id="resultsList"></div>
+                </div>
+
+                <!-- Pinned Notes Section -->
+                <div class="pinned-notes" id="pinnedNotes" style="display: none;">
+                    <h2>📌 Pinned Notes</h2>
+                    <div id="pinnedList"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Statistics Modal -->
+    <div id="statsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeStats">&times;</span>
+            <h2>📊 Statistics Dashboard</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalNotes">0</div>
+                    <div class="stat-label">Total Notes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalTodos">0</div>
+                    <div class="stat-label">Total Tasks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="completedTodos">0</div>
+                    <div class="stat-label">Completed Tasks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalTags">0</div>
+                    <div class="stat-label">Unique Tags</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalWords">0</div>
+                    <div class="stat-label">Total Words</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="productivity">0%</div>
+                    <div class="stat-label">Productivity</div>
+                </div>
+            </div>
+            <div class="stats-charts">
+                <h3>Category Distribution</h3>
+                <div id="categoryChart" class="chart"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trash Bin Modal -->
+    <div id="trashModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <span class="close" id="closeTrash">&times;</span>
+            <h2>🗑️ Trash Bin</h2>
+            <div class="trash-info">
+                <p>Deleted notes are kept for 30 days before permanent deletion.</p>
+                <div class="trash-stats">
+                    <span id="trashCount">0 items in trash</span>
+                    <button id="emptyTrash" class="export-btn" style="background: linear-gradient(45deg, #ef4444, #dc2626); margin-left: 20px;">
+                        🗑️ Empty Trash
+                    </button>
+                </div>
+            </div>
+            <div id="trashList" class="all-notes-list"></div>
+        </div>
+    </div>
+
+    <!-- All Notes Modal -->
+    <div id="allNotesModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <span class="close" id="closeAllNotes">&times;</span>
+            <h2>📋 All Notes</h2>
+            <div class="notes-filter-bar">
+                <input type="text" id="notesFilterInput" placeholder="Filter notes..." style="width: 300px; margin: 10px 0;">
+                <select id="notesCategoryFilter" style="margin-left: 10px;">
+                    <option value="">All Categories</option>
+                    <option value="work">💼 Work</option>
+                    <option value="personal">👤 Personal</option>
+                    <option value="ideas">💡 Ideas</option>
+                    <option value="urgent">🔥 Urgent</option>
+                </select>
+            </div>
+            <div id="allNotesList" class="all-notes-list"></div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div id="shortcutsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeShortcuts">&times;</span>
+            <h2>⌨️ Keyboard Shortcuts</h2>
+            <div class="shortcuts-list">
+                <div class="shortcut-item">
+                    <kbd>Ctrl</kbd> + <kbd>S</kbd>
+                    <span>Save Note</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>Ctrl</kbd> + <kbd>N</kbd>
+                    <span>New Note (Clear)</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>Ctrl</kbd> + <kbd>F</kbd>
+                    <span>Focus Search</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>Ctrl</kbd> + <kbd>M</kbd>
+                    <span>Toggle Markdown Preview</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>Ctrl</kbd> + <kbd>K</kbd>
+                    <span>Show Shortcuts</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>Ctrl</kbd> + <kbd>D</kbd>
+                    <span>Toggle Theme</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>Ctrl</kbd> + <kbd>P</kbd>
+                    <span>Pin/Unpin Note</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>Ctrl</kbd> + <kbd>L</kbd>
+                    <span>View All Notes</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>Ctrl</kbd> + <kbd>T</kbd>
+                    <span>View Trash Bin</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>Ctrl</kbd> + <kbd>Q</kbd>
+                    <span>Quick Capture</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>Esc</kbd>
+                    <span>Close Modals</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates Modal -->
+    <div id="templatesModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeTemplates">&times;</span>
+            <h2>📋 Note Templates</h2>
+            <p>Choose a template to start your note:</p>
+            <div class="templates-grid" id="templatesGrid"></div>
+        </div>
+    </div>
+
+    <!-- Custom Theme Modal -->
+    <div id="themeModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeTheme">&times;</span>
+            <h2>🎨 Custom Themes</h2>
+            <div class="theme-customizer">
+                <div class="theme-presets">
+                    <h3>Preset Themes</h3>
+                    <div class="preset-grid" id="presetGrid"></div>
+                </div>
+                <div class="theme-custom">
+                    <h3>Custom Colors</h3>
+                    <div class="color-pickers">
+                        <div class="color-picker-item">
+                            <label>Primary Color:</label>
+                            <input type="color" id="primaryColor" value="#00ffff">
+                        </div>
+                        <div class="color-picker-item">
+                            <label>Secondary Color:</label>
+                            <input type="color" id="secondaryColor" value="#7c3aed">
+                        </div>
+                        <div class="color-picker-item">
+                            <label>Accent Color:</label>
+                            <input type="color" id="accentColor" value="#ec4899">
+                        </div>
+                    </div>
+                    <button id="applyCustomTheme" style="margin-top: 20px;">Apply Custom Theme</button>
+                    <button id="resetTheme" style="margin-top: 10px; background: linear-gradient(45deg, #6b7280, #4b5563);">Reset to Default</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Capture Floating Button -->
+    <div id="quickCapture" class="quick-capture-fab" title="Quick Capture (Ctrl+Q)">
+        ⚡
+    </div>
+
+    <!-- AI Settings Modal -->
+    <div id="aiSettingsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeAISettings">&times;</span>
+            <h2>⚙️ AI Settings</h2>
+            <div class="ai-settings-content">
+                <p>Configure Google Gemini AI for text improvement (FREE & Reliable!).</p>
+                <div class="setting-item">
+                    <label>Google Gemini API Key:</label>
+                    <input type="password" id="geminiApiKey" placeholder="AIza..." style="width: 100%; margin-top: 10px;">
+                    <small style="color: var(--text-secondary); display: block; margin-top: 5px;">
+                        Get your free API key at <a href="https://makersuite.google.com/app/apikey" target="_blank" style="color: var(--accent-cyan);">Google AI Studio</a>
+                    </small>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button id="saveAISettings">💾 Save Token</button>
+                    <button id="testAIConnection" style="background: linear-gradient(45deg, #10b981, #059669);">🔌 Test Connection</button>
+                </div>
+                <div id="aiStatus" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Preview Modal -->
+    <div id="aiPreviewModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <span class="close" id="closeAIPreview">&times;</span>
+            <h2>✨ AI Improved Text</h2>
+            <div class="ai-preview-container">
+                <div class="ai-preview-section">
+                    <h3>Original:</h3>
+                    <div id="aiOriginalText" class="ai-text-box"></div>
+                </div>
+                <div class="ai-preview-section">
+                    <h3>AI Improved:</h3>
+                    <div id="aiImprovedText" class="ai-text-box" contenteditable="true"></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button id="acceptAI" style="flex: 1; background: linear-gradient(45deg, #10b981, #059669);">✅ Accept</button>
+                <button id="rejectAI" style="flex: 1; background: linear-gradient(45deg, #ef4444, #dc2626);">❌ Reject</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Capture Modal -->
+    <div id="quickCaptureModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" id="closeQuickCapture">&times;</span>
+            <h2>⚡ Quick Capture</h2>
+            <textarea id="quickCaptureInput" placeholder="Quick note..." style="min-height: 150px;"></textarea>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button id="saveQuickCapture" style="flex: 1;">💾 Save</button>
+                <button id="cancelQuickCapture" style="flex: 1; background: linear-gradient(45deg, #6b7280, #4b5563);">❌ Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cloud Sync Modal -->
+    <div id="cloudSyncModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeCloudSync">&times;</span>
+            <h2>☁️ Cloud Sync</h2>
+            <div class="cloud-sync-content">
+                <p>Sync your notes across all devices using GitHub Gist (FREE!).</p>
+                
+                <div class="sync-status" id="syncStatus">
+                    <div class="status-indicator" id="statusIndicator">⚪ Not Connected</div>
+                    <div id="lastSync"></div>
+                </div>
+                
+                <div class="setting-item">
+                    <label>GitHub Personal Access Token:</label>
+                    <input type="password" id="githubToken" placeholder="ghp_..." style="width: 100%; margin-top: 10px;">
+                    <small style="color: var(--text-secondary); display: block; margin-top: 5px;">
+                        Create a token at <a href="https://github.com/settings/tokens/new" target="_blank" style="color: var(--accent-cyan);">github.com/settings/tokens</a> with 'gist' scope
+                    </small>
+                </div>
+                
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button id="saveGithubToken" style="flex: 1;">💾 Save Token</button>
+                    <button id="testGithubConnection" style="flex: 1; background: linear-gradient(45deg, #10b981, #059669);">🔌 Test</button>
+                </div>
+                
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button id="syncNow" style="flex: 1; background: linear-gradient(45deg, var(--accent-cyan), var(--accent-purple);">🔄 Sync Now</button>
+                    <button id="autoSyncToggle" style="flex: 1;" data-enabled="false">⏸️ Auto-Sync: OFF</button>
+                </div>
+                
+                <div id="cloudSyncStatus" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PWA Install Prompt -->
+    <div id="pwaInstallPrompt" class="pwa-install-banner" style="display: none;">
+        <div class="pwa-install-content">
+            <div class="pwa-install-icon">📱</div>
+            <div class="pwa-install-text">
+                <strong>Install NoteAI</strong>
+                <p>Install as an app for better experience!</p>
+            </div>
+            <div class="pwa-install-actions">
+                <button id="pwaInstallBtn" class="pwa-install-yes">✅ Install</button>
+                <button id="pwaInstallDismiss" class="pwa-install-no">❌ Later</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
